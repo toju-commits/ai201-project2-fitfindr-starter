@@ -1,61 +1,203 @@
-# FitFindr — Starter Kit
+# FitFindr — AI201 Project 2
 
-This starter kit contains everything you need to begin Project 2.
+FitFindr is a multi-tool AI agent that helps users find secondhand fashion listings and style them with their existing wardrobe.
 
-## What's Included
+The agent takes a natural-language shopping request, searches a mock resale dataset, selects the best matching item, suggests an outfit, and creates a short social-media-style fit card.
 
+---
+
+## What the Agent Does
+
+Example query:
+
+```text
+vintage graphic tee under $30
 ```
-ai201-project2-fitfindr-starter/
-├── data/
-│   ├── listings.json          # 40 mock secondhand listings
-│   └── wardrobe_schema.json   # Wardrobe format + example wardrobe
-├── utils/
-│   └── data_loader.py         # Helper functions for loading the data
-├── planning.md                # Your planning template — fill this out first
-└── requirements.txt           # Python dependencies
+
+FitFindr will:
+
+1. Parse the query into structured search filters.
+2. Search the mock secondhand listings dataset.
+3. Select the most relevant listing.
+4. Suggest an outfit using the user's wardrobe.
+5. Generate a short fit card/caption for the selected item.
+
+---
+
+## Core Tools
+
+### 1. `search_listings(description, size=None, max_price=None)`
+
+Searches `data/listings.json` for matching listings.
+
+It supports:
+
+- keyword matching
+- synonym expansion
+- size filtering
+- price filtering
+- relevance scoring
+- no-results handling
+
+Search is deterministic instead of LLM-based so retrieval stays reliable and testable.
+
+### 2. `suggest_outfit(new_item, wardrobe)`
+
+Suggests 1–2 outfits using the selected listing and the user's wardrobe.
+
+If a Groq API key is available, this tool uses an LLM to create natural styling advice. If Groq is unavailable, it falls back to deterministic styling logic so the app still runs locally.
+
+### 3. `create_fit_card(outfit, new_item)`
+
+Creates a short shareable caption for the thrifted find.
+
+The caption mentions the item, price, platform, and overall outfit vibe.
+
+---
+
+## Agent Flow
+
+```text
+User query
+   ↓
+parse_query()
+   ↓
+search_listings()
+   ↓
+select top listing
+   ↓
+suggest_outfit()
+   ↓
+create_fit_card()
+   ↓
+Gradio UI output
 ```
+
+The agent stores state in a session dictionary:
+
+```python
+{
+    "query": ...,
+    "parsed": ...,
+    "search_results": ...,
+    "selected_item": ...,
+    "wardrobe": ...,
+    "outfit_suggestion": ...,
+    "fit_card": ...,
+    "error": ...,
+}
+```
+
+This makes the tool chain easy to inspect and debug.
+
+---
 
 ## Setup
+
+Install dependencies:
 
 ```bash
 pip install -r requirements.txt
 ```
 
-Set your Groq API key in a `.env` file (get a free key at [console.groq.com](https://console.groq.com)):
-```
+Optional: create a `.env` file for Groq.
+
+```bash
 GROQ_API_KEY=your_key_here
+GROQ_MODEL=llama-3.3-70b-versatile
 ```
 
-## The Mock Listings Dataset
+The app still works without a Groq key because the styling tools include fallback behavior.
 
-`data/listings.json` contains 40 mock secondhand listings across categories (tops, bottoms, outerwear, shoes, accessories) and styles (vintage, y2k, grunge, cottagecore, streetwear, and more).
+---
 
-Each listing has: `id`, `title`, `description`, `category`, `style_tags`, `size`, `condition`, `price`, `colors`, `brand`, and `platform`.
+## Run the Agent from the Command Line
 
-Load it with:
-```python
-from utils.data_loader import load_listings
-listings = load_listings()
+```bash
+python agent.py
 ```
 
-## The Wardrobe Schema
+This runs a happy-path test and a no-results test.
 
-`data/wardrobe_schema.json` defines the format your agent uses to represent a user's existing wardrobe. It includes:
+---
 
-- `schema`: field definitions for a wardrobe item
-- `example_wardrobe`: a sample wardrobe with 10 items you can use for testing
-- `empty_wardrobe`: a starting template for a new user
+## Run the Gradio App
 
-Load an example wardrobe with:
-```python
-from utils.data_loader import get_example_wardrobe
-wardrobe = get_example_wardrobe()
+```bash
+python app.py
 ```
 
-## Where to Start
+Then open the local URL printed in the terminal, usually:
 
-1. **Read `planning.md` and fill it out before writing any code.**
-2. Verify the data loads correctly by running `python utils/data_loader.py`.
-3. Build and test each tool individually before connecting them through your planning loop.
+```text
+http://127.0.0.1:7860
+```
 
-Your implementation files go in this same directory. There's no required file structure for your agent code — organize it however makes sense for your design.
+Try these sample queries:
+
+```text
+vintage graphic tee under $30
+platform sneakers size 8 under $60
+designer ballgown size XXS under $5
+```
+
+---
+
+## Run Tests
+
+```bash
+pytest
+```
+
+Current test coverage includes:
+
+- query parsing
+- search results
+- no-results behavior
+- empty wardrobe handling
+- fit card guardrails
+- full happy-path agent loop
+- full no-results agent loop
+
+Latest local result:
+
+```text
+7 passed
+```
+
+---
+
+## Error Handling
+
+FitFindr handles several failure cases:
+
+- empty user query
+- no matching listings
+- missing or empty wardrobe
+- missing Groq API key
+- empty outfit text before fit-card generation
+
+When no listing matches, the agent stops early and returns a helpful message instead of pretending it found an item.
+
+---
+
+## AI Tool Usage
+
+AI assistance was used to help plan, implement, and debug the project.
+
+The deterministic parts of the agent, such as query parsing and listing search, were kept rule-based so they are reliable and testable. LLM usage is limited to natural-language styling and caption generation, where creative text output is useful.
+
+---
+
+## Files
+
+```text
+app.py                  Gradio UI
+agent.py                Planning loop and session state
+tools.py                Agent tools
+planning.md             Project planning document
+data/listings.json      Mock secondhand listings
+data/wardrobe_schema.json
+utils/data_loader.py    Dataset loading helpers
+tests/test_fitfindr.py  Automated tests
+```
